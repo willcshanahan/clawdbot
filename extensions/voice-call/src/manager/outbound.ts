@@ -245,3 +245,31 @@ export async function endCall(
   }
 }
 
+/**
+ * Reject an inbound call by hanging it up before creating a call record.
+ * Used when inbound policy or allowlist rejects the caller.
+ */
+export async function rejectInboundCall(
+  ctx: CallManagerContext,
+  providerCallId: string,
+  from: string | undefined,
+): Promise<void> {
+  if (!ctx.provider) {
+    console.warn("[voice-call] Cannot reject inbound call: provider not initialized");
+    return;
+  }
+
+  try {
+    await ctx.provider.hangupCall({
+      callId: `rejected-${providerCallId}`,
+      providerCallId,
+      reason: "hangup-bot",
+    });
+    console.log(`[voice-call] Rejected inbound call from ${from ?? "unknown"}`);
+  } catch (err) {
+    console.warn(
+      `[voice-call] Failed to reject inbound call: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+

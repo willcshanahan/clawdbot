@@ -495,6 +495,33 @@ export class CallManager {
   }
 
   /**
+   * Reject an inbound call by hanging it up before creating a call record.
+   * Used when inbound policy or allowlist rejects the caller.
+   */
+  private async rejectInboundCall(
+    providerCallId: string,
+    from: string | undefined,
+  ): Promise<void> {
+    if (!this.provider) {
+      console.warn("[voice-call] Cannot reject inbound call: provider not initialized");
+      return;
+    }
+
+    try {
+      await this.provider.hangupCall({
+        callId: `rejected-${providerCallId}`,
+        providerCallId,
+        reason: "hangup-bot",
+      });
+      console.log(`[voice-call] Rejected inbound call from ${from ?? "unknown"}`);
+    } catch (err) {
+      console.warn(
+        `[voice-call] Failed to reject inbound call: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  /**
    * Create a call record for an inbound call.
    */
   private createInboundCall(
@@ -559,7 +586,7 @@ export class CallManager {
     if (!call && event.direction === "inbound" && event.providerCallId) {
       // Check if we should accept this inbound call
       if (!this.shouldAcceptInbound(event.from)) {
-        // TODO: Could hang up the call here
+        void this.rejectInboundCall(event.providerCallId, event.from);
         return;
       }
 

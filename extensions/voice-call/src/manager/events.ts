@@ -12,7 +12,7 @@ import {
   resolveTranscriptWaiter,
   startMaxDurationTimer,
 } from "./timers.js";
-import { endCall } from "./outbound.js";
+import { endCall, rejectInboundCall } from "./outbound.js";
 
 function shouldAcceptInbound(config: CallManagerContext["config"], from: string | undefined): boolean {
   const { inboundPolicy: policy, allowFrom } = config;
@@ -89,7 +89,7 @@ export function processEvent(ctx: CallManagerContext, event: NormalizedEvent): v
 
   if (!call && event.direction === "inbound" && event.providerCallId) {
     if (!shouldAcceptInbound(ctx.config, event.from)) {
-      // TODO: Could hang up the call here.
+      void rejectInboundCall(ctx, event.providerCallId, event.from);
       return;
     }
 
