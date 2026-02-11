@@ -20,54 +20,30 @@ final class TradeRepository: TradeRepositoryProtocol {
 
     /// Fetch all trades (offline-first: try sync, fallback to cache)
     func fetchAll() async throws -> [TradeRecord] {
-        // Try to sync from API (fire and forget - don't block on errors)
-        Task {
-            do {
-                try await syncManager.syncTrades()
-            } catch {
-                logger.warning("Background sync failed, using cached data: \(error.localizedDescription)")
-            }
-        }
+        try? await syncManager.syncTrades()
 
-        // Return from local cache immediately
         let descriptor = FetchDescriptor<TradeEntity>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         let entities = try modelContext.fetch(descriptor)
-        logger.info("Fetched \(entities.count) trades from local cache")
         return entities.map { $0.toTradeRecord() }
     }
 
     /// Fetch open trades
     func fetchOpen() async throws -> [TradeRecord] {
-        // Try to sync from API (fire and forget)
-        Task {
-            do {
-                try await syncManager.syncTrades()
-            } catch {
-                logger.warning("Background sync failed, using cached data: \(error.localizedDescription)")
-            }
-        }
+        try? await syncManager.syncTrades()
 
         let descriptor = FetchDescriptor<TradeEntity>(
             predicate: #Predicate { $0.status == "OPEN" },
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         let entities = try modelContext.fetch(descriptor)
-        logger.info("Fetched \(entities.count) open trades from local cache")
         return entities.map { $0.toTradeRecord() }
     }
 
     /// Fetch closed trades with limit
     func fetchClosed(limit: Int = 50) async throws -> [TradeRecord] {
-        // Try to sync from API (fire and forget)
-        Task {
-            do {
-                try await syncManager.syncTrades()
-            } catch {
-                logger.warning("Background sync failed, using cached data: \(error.localizedDescription)")
-            }
-        }
+        try? await syncManager.syncTrades()
 
         var descriptor = FetchDescriptor<TradeEntity>(
             predicate: #Predicate { $0.status == "CLOSED" || $0.status == "SETTLED" },
@@ -75,7 +51,6 @@ final class TradeRepository: TradeRepositoryProtocol {
         )
         descriptor.fetchLimit = limit
         let entities = try modelContext.fetch(descriptor)
-        logger.info("Fetched \(entities.count) closed trades from local cache")
         return entities.map { $0.toTradeRecord() }
     }
 }

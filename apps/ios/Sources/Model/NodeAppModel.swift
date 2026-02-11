@@ -26,6 +26,7 @@ final class NodeAppModel {
     var mainSessionKey: String = "main"
 
     private let gateway = GatewayNodeSession()
+    private var webSocketManager: WebSocketManager?
     private var gatewayTask: Task<Void, Never>?
     private var voiceWakeSyncTask: Task<Void, Never>?
     @ObservationIgnored private var cameraHUDDismissTask: Task<Void, Never>?
@@ -346,7 +347,7 @@ final class NodeAppModel {
         Self.color(fromHex: self.seamColorHex) ?? Self.defaultSeamColor
     }
 
-    private static let defaultSeamColor = Color(red: 79 / 255.0, green: 122 / 255.0, blue: 154 / 255.0)
+    private static let defaultSeamColor = CB.blue
 
     private static func color(fromHex raw: String?) -> Color? {
         let trimmed = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -916,6 +917,92 @@ private extension NodeAppModel {
             }
         }
     }
+
+    // MARK: - WebSocket Real-Time Updates
+
+    func connectWebSocket(gatewayURL: URL) {
+        // Disconnect existing connection if any
+        webSocketManager?.disconnect()
+
+        // Build WebSocket URL from HTTP gateway URL
+        var components = URLComponents(url: gatewayURL, resolvingAgainstBaseURL: false)
+        components?.scheme = gatewayURL.scheme == "https" ? "wss" : "ws"
+        components?.path = "/ws/live"
+
+        guard let wsURL = components?.url else {
+            print("Failed to build WebSocket URL from gateway URL: \(gatewayURL)")
+            return
+        }
+
+        // Create and connect WebSocket manager
+        let manager = WebSocketManager()
+        manager.onMessage = { [weak self] message in
+            Task { @MainActor in
+                self?.handleWebSocketMessage(message)
+            }
+        }
+        manager.connect(to: wsURL)
+        webSocketManager = manager
+    }
+
+    func disconnectWebSocket() {
+        webSocketManager?.disconnect()
+        webSocketManager = nil
+    }
+
+    private func handleWebSocketMessage(_ message: WebSocketMessage) {
+        // Route messages to appropriate handlers via NotificationCenter
+        switch message.type {
+        case "TRADE_EXECUTED":
+            NotificationCenter.default.post(
+                name: .tradeExecuted,
+                object: nil,
+                userInfo: ["payload": message.payload as Any]
+            )
+
+        case "LEAD_QUALIFIED":
+            NotificationCenter.default.post(
+                name: .leadQualified,
+                object: nil,
+                userInfo: ["payload": message.payload as Any]
+            )
+
+        case "AGENT_STATE_CHANGE":
+            NotificationCenter.default.post(
+                name: .agentStateChanged,
+                object: nil,
+                userInfo: [
+                    "agent": message.source as Any,
+                    "payload": message.payload as Any
+                ]
+            )
+
+        case "STATUS_REPORT":
+            // Agent status reports
+            if let source = message.source {
+                NotificationCenter.default.post(
+                    name: .agentStatusReport,
+                    object: nil,
+                    userInfo: [
+                        "agent": source,
+                        "payload": message.payload as Any
+                    ]
+                )
+            }
+
+        default:
+            print("Unhandled WebSocket message type: \(message.type)")
+        }
+    }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let tradeExecuted = Notification.Name("tradeExecuted")
+    static let leadQualified = Notification.Name("leadQualified")
+    static let agentStateChanged = Notification.Name("agentStateChanged")
+    static let agentStatusReport = Notification.Name("agentStatusReport")
 }
 
 #if DEBUG
