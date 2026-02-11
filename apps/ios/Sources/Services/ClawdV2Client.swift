@@ -67,7 +67,7 @@ final class ClawdV2Client: Sendable {
         request.httpMethod = "POST"
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await NetworkConfiguration.urlSession.data(for: request)
             let duration = Date().timeIntervalSince(start) * 1000
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
             logger.logNetworkResponse(url: url.absoluteString, statusCode: statusCode, duration: duration)
@@ -86,7 +86,7 @@ final class ClawdV2Client: Sendable {
         request.httpMethod = "POST"
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await NetworkConfiguration.urlSession.data(for: request)
             let duration = Date().timeIntervalSince(start) * 1000
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
             logger.logNetworkResponse(url: url.absoluteString, statusCode: statusCode, duration: duration)
@@ -109,7 +109,7 @@ final class ClawdV2Client: Sendable {
         request.httpMethod = "POST"
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await NetworkConfiguration.urlSession.data(for: request)
             let duration = Date().timeIntervalSince(start) * 1000
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
 
@@ -167,7 +167,7 @@ final class ClawdV2Client: Sendable {
         request.httpBody = try? JSONEncoder().encode(["token": token])
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await NetworkConfiguration.urlSession.data(for: request)
             let duration = Date().timeIntervalSince(start) * 1000
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
 
@@ -198,7 +198,7 @@ final class ClawdV2Client: Sendable {
         let start = Date()
 
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await NetworkConfiguration.urlSession.data(from: url)
             let duration = Date().timeIntervalSince(start) * 1000
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
 

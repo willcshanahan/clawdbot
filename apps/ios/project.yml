@@ -17,6 +17,9 @@ packages:
   Sentry:
     url: https://github.com/getsentry/sentry-cocoa.git
     from: 8.0.0
+  Kingfisher:
+    url: https://github.com/onevcat/Kingfisher.git
+    from: 8.0.0
 
 schemes:
   Clawdbot:
@@ -44,6 +47,8 @@ targets:
         product: SwabbleKit
       - package: Sentry
         product: Sentry
+      - package: Kingfisher
+        product: Kingfisher
       - sdk: AppIntents.framework
       - sdk: Charts.framework
       - sdk: EventKit.framework
