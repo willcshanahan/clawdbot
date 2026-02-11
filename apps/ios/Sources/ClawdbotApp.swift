@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct ClawdbotApp: App {
@@ -7,9 +8,29 @@ struct ClawdbotApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Int = 3  // Default to Trading tab
 
+    let modelContainer: ModelContainer
+
     init() {
         // Initialize crash reporting FIRST
         CrashReporter.initialize()
+
+        // Setup SwiftData for offline persistence
+        let schema = Schema([
+            TradeEntity.self,
+            PositionEntity.self
+        ])
+
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none
+        )
+
+        do {
+            modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Failed to create ModelContainer: \(error)")
+        }
 
         GatewaySettingsStore.bootstrapPersistence()
         let appModel = NodeAppModel()
@@ -53,6 +74,7 @@ struct ClawdbotApp: App {
             .toolbarBackground(.white, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
             .tint(CB.blue)
+            .modelContainer(modelContainer)
             .environment(self.appModel)
             .environment(self.appModel.voiceWake)
             .environment(self.gatewayController)
